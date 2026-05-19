@@ -23,6 +23,7 @@ import json
 import argparse
 import urllib.request
 import urllib.error
+from typing import Optional, Tuple
 
 BASE_URL = "https://platform.higgsfield.ai"
 IMAGE_MODEL = "bytedance/seedream/v4/text-to-image"
@@ -38,7 +39,7 @@ ASPECT_MAP = {
 }
 
 
-def credentials() -> tuple[str, str]:
+def credentials() -> Tuple[str, str]:
     raw = os.environ.get("HF_CREDENTIALS", "")
     if not raw or ":" not in raw:
         sys.exit("❌ 未找到凭证。请先运行:\n   export HF_CREDENTIALS=\"KEY_ID:KEY_SECRET\"")
@@ -54,7 +55,7 @@ def auth_header() -> dict:
     }
 
 
-def _request(method: str, path: str, body: dict | None = None) -> dict:
+def _request(method: str, path: str, body: Optional[dict] = None) -> dict:
     url = f"{BASE_URL}{path}"
     data = json.dumps(body).encode() if body else None
     req = urllib.request.Request(url, data=data, headers=auth_header(), method=method)

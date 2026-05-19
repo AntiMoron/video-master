@@ -2,15 +2,13 @@
 """
 hf_oauth.py — Higgsfield 视频生成（Gmail/OAuth 订阅用户）
 
-从浏览器 DevTools Network 标签获取 JWT：
-  1. 打开 higgsfield.ai，登录
-  2. DevTools → Network → 过滤 fnf.higgsfield
-  3. 触发任意生成（或刷新 Library 页）
-  4. 找到 POST /jobs/... 请求 → Headers → Authorization: Bearer <TOKEN>
-  5. 复制 Token 部分（不含 "Bearer "）
+从浏览器 DevTools Network 标签获取两个值（fnf.higgsfield.ai 的任意请求）：
+  - Authorization header → HF_JWT
+  - x-datadome-clientid header → HF_DATADOME
 
 使用方法:
   export HF_JWT="eyJhbGc..."
+  export HF_DATADOME="bl14hxa9..."
   python3 hf_oauth.py "视频描述" [--aspect 9:16] [--duration 5] [--output out.mp4]
 """
 
@@ -18,6 +16,7 @@ import os
 import sys
 import time
 import json
+import base64
 import argparse
 from typing import Optional, Dict, Any
 
@@ -28,7 +27,6 @@ except ImportError:
     sys.exit("❌ 缺少依赖，请运行: pip3 install curl_cffi")
 
 API_BASE   = "https://fnf.higgsfield.ai"
-WARMUP_URL = "https://higgsfield.ai"
 
 ASPECT_DIMS = {
     "9:16":  (720, 1280),
@@ -42,17 +40,59 @@ def jwt() -> str:
     token = os.environ.get("HF_JWT", "").strip()
     if not token:
         sys.exit("❌ 未找到 JWT。请先运行:\n   export HF_JWT=\"eyJ...\"")
+    # 解码 JWT payload 检查过期时间
+    try:
+        payload_b64 = token.split(".")[1]
+        payload_b64 += "=" * (-len(payload_b64) % 4)  # padding
+        payload = json.loads(base64.urlsafe_b64decode(payload_b64))
+        exp = payload.get("exp", 0)
+        remaining = exp - time.time()
+        if remaining <= 0:
+            sys.exit(
+                f"❌ JWT 已过期（{int(-remaining)}秒前到期）\n"
+                "   请重新从浏览器复制：\n"
+                "   DevTools → Network → fnf.higgsfield.ai 任意请求\n"
+                "   → Headers → Authorization: Bearer eyJ...\n"
+                "   → export HF_JWT=\"eyJ...\""
+            )
+        if remaining < 60:
+            print(f"⚠️  JWT 还剩 {int(remaining)}秒有效期，请尽快完成操作")
+        else:
+            print(f"  JWT 有效期剩余: {int(remaining)}秒")
+    except Exception:
+        pass  # 解析失败时继续，让 API 返回 401 再提示
     return token
 
 
 def make_session() -> requests.Session:
-    session = requests.Session(impersonate=IMPERSONATE)
-    # Warmup to get Cloudflare clearance
-    try:
-        session.get(WARMUP_URL, timeout=10)
-    except Exception:
-        pass
-    return session
+    return requests.Session(impersonate=IMPERSONATE)
+
+
+def browser_headers() -> dict:
+    """完整浏览器指纹 headers，匹配 Chrome 148 on macOS"""
+    h = {
+        "accept": "*/*",
+        "accept-language": "en",
+        "content-type": "application/json",
+        "origin": "https://higgsfield.ai",
+        "referer": "https://higgsfield.ai/",
+        "sec-ch-ua": '"Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"',
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": '"macOS"',
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-site",
+        "user-agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/148.0.0.0 Safari/537.36"
+        ),
+        "Authorization": f"Bearer {jwt()}",
+    }
+    datadome = os.environ.get("HF_DATADOME", "").strip()
+    if datadome:
+        h["x-datadome-clientid"] = datadome
+    return h
 
 
 def submit_video(session, prompt: str, aspect: str, duration: int,
@@ -80,33 +120,29 @@ def submit_video(session, prompt: str, aspect: str, duration: int,
         "use_free_gens": False,
         "use_unlim": False,
     }
-    headers = {"Authorization": f"Bearer {jwt()}"}
     resp = session.post(
         f"{API_BASE}/jobs/v2/kling3_0",
         json=payload,
-        headers=headers,
+        headers=browser_headers(),
         timeout=30,
     )
     if resp.status_code != 200:
         sys.exit(f"❌ 提交失败 {resp.status_code}:\n{resp.text[:500]}")
 
     data = resp.json()
-    # Response: {"id": project_id, "job_sets": [{"id": job_set_id, ...}]}
     job_sets = data.get("job_sets", [])
     if job_sets:
         return job_sets[0]["id"]
-    # fallback
     return data.get("id")
 
 
 def poll_job_set(session, job_set_id: str, timeout: int = 600) -> Optional[Dict]:
     url = f"{API_BASE}/job-sets/{job_set_id}"
-    headers = {"Authorization": f"Bearer {jwt()}"}
     deadline = time.time() + timeout
     dots = 0
     while time.time() < deadline:
         try:
-            resp = session.get(url, headers=headers, timeout=15)
+            resp = session.get(url, headers=browser_headers(), timeout=15)
             if resp.status_code == 200:
                 data = resp.json()
                 jobs = data.get("jobs", [])
@@ -120,7 +156,7 @@ def poll_job_set(session, job_set_id: str, timeout: int = 600) -> Optional[Dict]
                     if status == "failed":
                         print()
                         sys.exit(f"❌ 生成失败: {json.dumps(data, indent=2)}")
-        except Exception as e:
+        except Exception:
             pass
         time.sleep(3)
     sys.exit(f"❌ 超时 ({timeout}s)")
