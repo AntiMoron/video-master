@@ -4,6 +4,144 @@
 
 ---
 
+## A-roll / B-roll 工作流（来源：GitHub Top-5 调研）
+
+> GitHub 无 "A-roll/B-roll" 专项 skill，以下是从 Top-5 仓库提炼的最佳实践。
+
+### 概念定义
+
+| 类型 | AI 视频对应 | 典型场景 |
+|------|-----------|---------|
+| **A-roll** | 主镜头：presenter、UGC 说话人、品牌叙事 | 创始人出镜、talking head、情感故事 |
+| **B-roll** | 补充镜头：产品特写、场景切换、氛围画面 | 产品旋转、生活方式、数据可视化、地点空镜 |
+
+### 标准两步工作流
+
+**Step 1 — A-roll 主体（Seedance 2.0 / Kling 3.0）**
+```
+[人物描述 + 位置]. [说话内容 或 情绪动作].
+Camera: static medium shot, locked-off.
+Style: [色调]. [比例 9:16].
+```
+
+**Step 2 — B-roll 延伸（Seedance 2.0 `--video` 输入 Step 1 结果）**
+```
+Extend the video by [N]s. 
+[B-roll 场景描述，时间戳分镜]:
+0-Xs: [产品特写 / 场景切换]
+X-Ys: [广告文字叠加 / 情绪收尾]
+```
+
+**CLI 命令：**
+```bash
+# Step 1: 生成 A-roll
+~/bin/higgsfield generate create seedance_2_0 \
+  --prompt "A-roll prompt" --aspect_ratio 9:16 --duration 8 --wait
+
+# Step 2: 用 A-roll 生成 B-roll 延伸（把 Step 1 的 job id 传入）
+~/bin/higgsfield generate create seedance_2_0 \
+  --prompt "Extend the video by 7s. [B-roll描述]" \
+  --video <step1_job_id> --aspect_ratio 9:16 --duration 7 --wait
+```
+
+---
+
+### A-roll 模板库（beshuaxian ★510）
+
+#### A1 — 社交钩子 Presenter（UGC / TikTok / Reels）
+```
+[人物描述，具体服装面貌]. 直视镜头，说:
+"[钩子台词 — 问题/惊喜/挑战]"
+Camera: static medium close-up, locked-off.
+Style: 高清自然光，略带 handheld 感. 9:16.
+Sound: 环境音 + 清晰人声.
+```
+**2秒钩子规则：** 台词第一个词必须是行动词或数字（"This changed...", "3 things...", "Nobody tells you..."）
+
+#### A2 — 品牌创始人故事（Brand Story）
+```
+[创始人描述，手部特写 或 面部]. [情感动作：拿起产品 / 写字 / 工作中].
+Voiceover: "[品牌起源/使命，一句话]"
+Camera: slow Dolly In from medium-wide to medium close-up.
+Style: Cinematic，暖色调，shallow DOF. 16:9 或 9:16.
+```
+
+#### A3 — SaaS / 软件产品 Talking Head
+```
+[主持人/创始人] 坐在干净的办公室，面向镜头，自信表情.
+屏幕后方可见软件界面 [描述 UI].
+说: "[产品核心价值主张，一句话]"
+Camera: static medium shot, slight push-in during key line.
+Style: 高对比度现代感，冷蓝 + 白. 16:9.
+Text overlay at Ns: "[产品名 + CTA]"
+```
+
+---
+
+### B-roll 模板库（beshuaxian ★510 + EvoLinkAI ★365）
+
+#### B1 — 产品 360 旋转（Product B-roll）
+```
+[产品描述，材质/颜色/造型]. 置于 [背景材质].
+Camera: Robo Arm arcing slowly 270° around the product.
+Style: Cinematic commercial，[光线描述]. [比例].
+Sound: subtle material texture sound.
+```
+
+#### B2 — 场景切换 B-roll（多场景单镜头）
+```
+@image1 @image2 @image3，one continuous shot tracking camera.
+From [场景1] through [场景2] to [场景3].
+No cuts. [运镜描述].
+```
+
+#### B3 — 视频延伸 B-roll（接 A-roll 后）
+```
+Extend the video by [N]s.
+0-3s: [产品/道具/细节特写，运镜].
+3-Ns: [广告文字出现] "[品牌标语]" [字体描述，出现方式].
+Final frame: [产品 hero shot].
+```
+
+#### B4 — 氛围/空镜 Cutaway
+```
+[地点描述]. [时间/光线/天气].
+No people. Camera: [Timelapse Landscape / Dolly Out / Crane Up].
+Style: [色调]. [比例]. [时长]s.
+Purpose: 在 A-roll 段落之间作为呼吸空间.
+```
+
+---
+
+### EvoLinkAI ★365 精选技法
+
+#### 技法1：@video1 二次创作（A-roll 当输入，改情节/加 B-roll）
+```
+Subvert the plot in @video1.
+[描述新情节走向]
+[时间戳] 0-Xs: [A-roll 保留部分]
+[时间戳] X-Ys: [B-roll 新增内容]
+```
+
+#### 技法2：视频延伸（A-roll → B-roll 续拍）
+```
+Extend @video1 by [N]s.
+[N]s
+[时间戳分镜:]
+1-5s: [B-roll 场景1]
+6-10s: [B-roll 场景2，可加产品/文字叠加]
+11-[N]s: [收尾 + 广告标语出现]
+```
+
+#### 技法3：多场景单镜头（B-roll 串联）
+```
+Based on @image1/@image2/@image3, one continuous shot.
+Camera tracks [主体] from [起点] through [中间点] to [终点].
+[每个节点的具体描述]. No cuts throughout.
+```
+
+---
+
 ## Template 01 — 电影追逐 Cinematic Action Chase
 
 **来源：** OSideMedia/higgsfield-ai-prompt-skill ★74
