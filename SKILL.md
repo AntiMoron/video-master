@@ -202,3 +202,49 @@ python ~/.claude/skills/video-master/generate.py \
 | 视频（实验） | `higgsfield-ai/dop/standard` | DoP 模型，可能支持文生视频 |
 
 > Kling 3.0 / Sora 2 / Veo 3 仅在 Web backend（需 Clerk cookie，不稳定），不在官方 API。
+
+---
+
+## Higgsfield CLI — 订阅用户（支持 Kling 3.0 / Sora 2 / Veo 3）
+
+**适用：** 有 higgsfield.ai 订阅（cloud.higgsfield.ai），可用全部最新模型。
+**脚本：** `hf.py`（来源：clawdybotty/higgsfield-cli，Clerk JWT 认证）
+
+### 一次性登录
+
+```bash
+python3 ~/.claude/skills/video-master/hf.py login
+# 输入 higgsfield.ai 账号邮箱 + 密码 + 邮件验证码
+# Session 保存在 ~/.config/hf/session.json，约 1 年有效
+```
+
+### 生成视频（Kling 3.0 文生视频）
+
+```bash
+python3 ~/.claude/skills/video-master/hf.py video \
+  "A developer sits at a dark home office, three monitors glowing. Opens OpenAI bill email. Eyes widen. He slumps back. Says flatly: 'There has to be a cheaper way.' Camera: static locked-off medium shot." \
+  --aspect-ratio 9:16 --duration 5 --sound on \
+  --output chatgpttech_ad.mp4
+```
+
+### 所有视频选项
+
+| 参数 | 说明 | 默认 |
+|------|------|------|
+| `--aspect-ratio` | `9:16` / `16:9` / `1:1` | `16:9` |
+| `--duration` | `5` 或 `10` 秒 | `5` |
+| `--sound` | `on` / `off` | `on` |
+| `--start-image` | 参考首帧图片路径 | — |
+| `--end-image` | 参考尾帧图片路径 | — |
+| `--use-free-gens` | 用免费生成配额 | false |
+| `--use-unlim` | 用无限生成配额 | false |
+| `--output` | 输出 .mp4 路径 | 自动命名 |
+
+### 可用 Web 模型（需订阅）
+
+| 模型 | 特点 |
+|------|------|
+| `kling3_0` | Kling 3.0，当前默认，文生/图生视频 |
+| 订阅后可通过 `hf.py models` 查看完整列表 | — |
+
+> **注意：** Web backend 使用 Clerk JWT，session 约 1 年有效，但 Higgsfield 可能在更新后失效，需要重新 `hf.py login`。
