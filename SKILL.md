@@ -160,3 +160,45 @@ Style: [色调、光影、画面感]. [比例].
 ---
 
 详细带注释模板、Before→After 改写示例、完整 Seedance API 调用 → `templates.md`
+
+---
+
+## Higgsfield 官方 API 生成视频
+
+**脚本：** `generate.py`（两步流水线：Seedream v4 文生图 → Kling 2.1 Pro 图生视频）
+
+### 快速开始
+
+```bash
+# 1. 设置凭证（来自 platform.higgsfield.ai → API Keys）
+export HF_CREDENTIALS="KEY_ID:KEY_SECRET"
+
+# 2. 生成视频（9:16 竖版，5秒）
+python ~/.claude/skills/video-master/generate.py \
+  --prompt "A developer opens his monthly OpenAI bill email. Eyes widen. He slumps back. Says flatly: 'There has to be a cheaper way.' Camera: static locked-off medium shot." \
+  --image-prompt "A developer in his late 20s at a dark home office, three monitors glowing blue, looking at email on screen, shocked expression" \
+  --aspect 9:16 --duration 5 --output ad_v1.mp4
+```
+
+### 所有选项
+
+| 参数 | 说明 | 默认 |
+|------|------|------|
+| `--prompt` | 视频动作/内容描述（必填） | — |
+| `--image-prompt` | 首帧静帧描述（可选，默认同 prompt） | — |
+| `--aspect` | `9:16` / `16:9` / `1:1` / `4:3` | `9:16` |
+| `--duration` | `5` 或 `10` 秒 | `5` |
+| `--output` | 输出文件路径 | `output.mp4` |
+| `--image-only` | 只生成首帧图片，不做视频 | false |
+| `--image-url` | 跳过 Step 1，直接用已有图片做视频 | — |
+
+### 模型说明（官方 API 可用）
+
+| 用途 | 模型 | 备注 |
+|------|------|------|
+| 文生图（首帧） | `bytedance/seedream/v4/text-to-image` | 高质量静帧 |
+| 图生视频 | `kling-video/v2.1/pro/image-to-video` | 稳定，5s/10s |
+| 图生视频（备选） | `bytedance/seedance/v1/pro/image-to-video` | Seedance 风格 |
+| 视频（实验） | `higgsfield-ai/dop/standard` | DoP 模型，可能支持文生视频 |
+
+> Kling 3.0 / Sora 2 / Veo 3 仅在 Web backend（需 Clerk cookie，不稳定），不在官方 API。
